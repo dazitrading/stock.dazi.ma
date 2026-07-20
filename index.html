@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#26241F">
+<title>Stock Check — DAZI · TOP UNIFORM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#26241F; --ink-soft:#5C5850; --paper:#F1F0EC; --card:#FFFFFF;
+  --line:#E2E0D9; --amber:#E89B1C; --amber-soft:#FBF0DA;
+  --rupture:#C93A2E; --rupture-soft:#F9E4E1;
+  --faible:#B97A0B; --faible-soft:#FBF0DA;
+  --ok:#2E7D4F; --ok-soft:#E1F0E7;
+  --r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--ink);
+  font-size:15px;line-height:1.45;padding-bottom:90px}
+h1,h2,.disp{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.04em}
+
+/* ---- Header ---- */
+header{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:20px;font-weight:700}
+header h1 span{color:var(--amber)}
+.hdr-chip{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;
+  letter-spacing:.05em;text-transform:uppercase;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 12px;cursor:pointer}
+
+.wrap{max-width:640px;margin:0 auto;padding:16px}
+
+/* ---- Setup screen ---- */
+.setup h2{font-size:26px;margin:18px 0 4px}
+.setup p{color:var(--ink-soft);margin-bottom:18px}
+.store-btn{display:flex;align-items:center;gap:14px;width:100%;background:var(--card);
+  border:1.5px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;
+  cursor:pointer;text-align:left;font-family:inherit}
+.store-btn.sel{border-color:var(--amber);background:var(--amber-soft)}
+.store-btn .tag{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.05em;background:var(--ink);color:var(--amber);
+  border-radius:6px;padding:6px 10px;min-width:56px;text-align:center}
+.store-btn small{display:block;color:var(--ink-soft)}
+.setup input{width:100%;border:1.5px solid var(--line);border-radius:var(--r);
+  padding:14px;font:inherit;background:var(--card);margin:6px 0 18px}
+.setup input:focus{outline:2px solid var(--amber);outline-offset:1px}
+.btn{display:block;width:100%;border:0;border-radius:var(--r);padding:15px;
+  font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+.btn-amber{background:var(--amber);color:var(--ink)}
+.btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink);margin-top:10px}
+.btn:disabled{opacity:.45}
+
+/* ---- Search + filters ---- */
+.toolbar{position:sticky;top:52px;z-index:15;background:var(--paper);padding:12px 0 8px}
+.toolbar input{width:100%;border:1.5px solid var(--line);border-radius:999px;
+  padding:11px 18px;font:inherit;background:var(--card)}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 2px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex:0 0 auto;font-size:13px;font-weight:600;border:1.5px solid var(--line);
+  background:var(--card);border-radius:999px;padding:6px 14px;cursor:pointer;font-family:inherit}
+.cat.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* ---- Article cards ---- */
+.art{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);
+  padding:14px;margin-bottom:12px}
+.art.touched{border-color:var(--amber)}
+.art .ref{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;
+  letter-spacing:.08em;color:var(--ink-soft)}
+.art .nom{font-weight:600;margin:2px 0 10px}
+.tailles{display:flex;flex-wrap:wrap;gap:8px}
+.taille{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;
+  letter-spacing:.04em;border:1.5px dashed var(--line);background:var(--paper);
+  border-radius:8px;padding:7px 13px;cursor:pointer;position:relative}
+.taille.open{border-style:solid;border-color:var(--ink)}
+.taille.RUPTURE{border-style:solid;border-color:var(--rupture);background:var(--rupture-soft);color:var(--rupture)}
+.taille.FAIBLE{border-style:solid;border-color:var(--faible);background:var(--faible-soft);color:var(--faible)}
+.taille.OK{border-style:solid;border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.taille .q{position:absolute;top:-8px;right:-8px;background:var(--ink);color:#fff;
+  font-size:11px;border-radius:999px;padding:1px 6px}
+
+/* ---- Inline status panel ---- */
+.panel{margin-top:12px;border-top:1.5px dashed var(--line);padding-top:12px}
+.panel .lbl{font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:8px}
+.statuts{display:flex;gap:8px;margin-bottom:12px}
+.st{flex:1;border:1.5px solid var(--line);background:var(--card);border-radius:8px;
+  padding:9px 4px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;cursor:pointer}
+.st[data-s="RUPTURE"].sel{background:var(--rupture);border-color:var(--rupture);color:#fff}
+.st[data-s="FAIBLE"].sel{background:var(--faible);border-color:var(--faible);color:#fff}
+.st[data-s="OK"].sel{background:var(--ok);border-color:var(--ok);color:#fff}
+.qterow{display:flex;align-items:center;gap:12px}
+.qterow .lbl{margin:0}
+.stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+.stepper button{width:42px;height:40px;border:0;background:var(--paper);font-size:20px;cursor:pointer}
+.stepper span{min-width:44px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ---- Sticky footer ---- */
+.foot{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--card);
+  border-top:1.5px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.foot-in{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.foot .count{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em}
+.foot .count b{color:var(--rupture)}
+.foot .btn{flex:1;padding:12px}
+
+/* ---- Vue d'ensemble ---- */
+.vue-head{display:flex;align-items:center;justify-content:space-between;margin:14px 0 12px}
+.vue-head h2{font-size:24px}
+.refresh{border:1.5px solid var(--line);background:var(--card);border-radius:999px;
+  padding:6px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.vrow{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);
+  padding:13px 14px;margin-bottom:10px}
+.vrow .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.vrow .nom{font-weight:600}
+.vrow .tsz{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;
+  background:var(--paper);border-radius:6px;padding:2px 9px;flex:0 0 auto}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.bdg{font-size:12.5px;font-weight:600;border-radius:999px;padding:4px 11px;display:inline-flex;gap:6px;align-items:center}
+.bdg.RUPTURE{background:var(--rupture-soft);color:var(--rupture)}
+.bdg.FAIBLE{background:var(--faible-soft);color:var(--faible)}
+.bdg small{font-weight:500;opacity:.75}
+.empty{color:var(--ink-soft);text-align:center;padding:50px 20px}
+.total{font-variant-numeric:tabular-nums}
+
+/* ---- Toast ---- */
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.25s;z-index:50;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hidden{display:none!important}
+.spin{border:3px solid var(--line);border-top-color:var(--amber);border-radius:50%;
+  width:28px;height:28px;margin:50px auto;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}.spin{animation-duration:2s}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>STOCK<span>CHECK</span></h1>
+  <button class="hdr-chip" id="hdrChip" onclick="goSetup()">Changer</button>
+</header>
+
+<!-- ========== ECRAN 1 : SETUP ========== -->
+<div class="wrap setup" id="scrSetup">
+  <h2>Qui pointe ?</h2>
+  <p>Choisir le magasin puis entrer votre nom.</p>
+
+  <button class="store-btn" data-mag="DAZI" onclick="pickMag(this)">
+    <span class="tag">DAZI</span>
+    <span><b>DAZI Multi Trading</b><small>Route Sidi Harazem</small></span>
+  </button>
+  <button class="store-btn" data-mag="TOP UNIFORM" onclick="pickMag(this)">
+    <span class="tag">TOP</span>
+    <span><b>Top Uniform</b><small>Rue Sefrou, Hay Amal</small></span>
+  </button>
+
+  <label class="lbl" for="respName" style="font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em">Responsable</label>
+  <input id="respName" placeholder="Votre nom" autocomplete="name">
+
+  <button class="btn btn-amber" id="btnStart" disabled onclick="startPointage()">Commencer le pointage</button>
+  <button class="btn btn-ghost" onclick="openVue()">Vue d'ensemble (commande atelier)</button>
+</div>
+
+<!-- ========== ECRAN 2 : POINTAGE ========== -->
+<div class="wrap hidden" id="scrPointage">
+  <div class="toolbar">
+    <input id="search" placeholder="Rechercher un article ou une réf…" oninput="renderArticles()">
+    <div class="cats" id="cats"></div>
+  </div>
+  <div id="artList"><div class="spin"></div></div>
+</div>
+
+<div class="foot hidden" id="footBar">
+  <div class="foot-in">
+    <div class="count"><b id="cnt">0</b> pointé(s)</div>
+    <button class="btn btn-amber" id="btnSend" onclick="sendPointage()">Envoyer</button>
+  </div>
+</div>
+
+<!-- ========== ECRAN 3 : VUE D'ENSEMBLE ========== -->
+<div class="wrap hidden" id="scrVue">
+  <div class="vue-head">
+    <h2>Ruptures — 2 magasins</h2>
+    <button class="refresh" onclick="loadVue()">↻ Actualiser</button>
+  </div>
+  <div id="vueList"><div class="spin"></div></div>
+  <button class="btn btn-amber" style="margin-top:14px" id="btnCmd" onclick="copierCommande()">Copier la commande atelier</button>
+  <button class="btn btn-ghost" onclick="partagerWhatsApp()">Envoyer sur WhatsApp</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================== CONFIG ================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbx87ongPgqqF2pbIPzhip4JMmY9olkW2g4iNDtqmlG7mXiRAFLlGoS2M2wH6MpxCrCg/exec'; // ← URL /exec du déploiement GAS
+
+/* ================== ETAT ================== */
+let MAG = localStorage.getItem('sc_mag') || '';
+let RESP = localStorage.getItem('sc_resp') || '';
+let ARTICLES = [];
+let CAT = 'Tous';
+let PICKS = {};        // "ref|taille" → {ref, designation, taille, statut, qte}
+let OPEN = null;       // "ref|taille" panneau ouvert
+let VUE = [];
+
+/* ================== NAV ================== */
+const $ = id => document.getElementById(id);
+function show(scr){
+  ['scrSetup','scrPointage','scrVue'].forEach(s=>$(s).classList.add('hidden'));
+  $(scr).classList.remove('hidden');
+  $('footBar').classList.toggle('hidden', scr!=='scrPointage');
+  $('hdrChip').textContent = scr==='scrPointage' ? MAG : (scr==='scrVue' ? 'Vue' : 'Accueil');
+  window.scrollTo(0,0);
+}
+function goSetup(){ show('scrSetup'); }
+
+/* ================== SETUP ================== */
+function pickMag(btn){
+  document.querySelectorAll('.store-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  MAG = btn.dataset.mag;
+  checkStart();
+}
+$('respName').value = RESP;
+$('respName').addEventListener('input', checkStart);
+function checkStart(){
+  $('btnStart').disabled = !(MAG && $('respName').value.trim().length >= 2);
+}
+if (MAG){
+  const b = document.querySelector('.store-btn[data-mag="'+MAG+'"]');
+  if (b) b.classList.add('sel');
+  checkStart();
+}
+
+function startPointage(){
+  RESP = $('respName').value.trim();
+  localStorage.setItem('sc_mag', MAG);
+  localStorage.setItem('sc_resp', RESP);
+  show('scrPointage');
+  if (!ARTICLES.length) loadArticles();
+}
+
+/* ================== API ================== */
+async function apiGet(action){
+  const r = await fetch(API_URL + '?action=' + action);
+  return r.json();
+}
+async function apiPost(body){
+  const r = await fetch(API_URL, { method:'POST', body: JSON.stringify(body) });
+  return r.json();
+}
+
+/* ================== POINTAGE ================== */
+async function loadArticles(){
+  try{
+    const d = await apiGet('articles');
+    ARTICLES = d.articles || [];
+    renderCats(); renderArticles();
+  }catch(e){
+    $('artList').innerHTML = '<p class="empty">Connexion impossible. Vérifier la connexion internet puis réessayer.</p>';
+  }
+}
+
+function renderCats(){
+  const cats = ['Tous', ...new Set(ARTICLES.map(a=>a.categorie))];
+  $('cats').innerHTML = cats.map(c=>
+    `<button class="cat ${c===CAT?'sel':''}" onclick="setCat('${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');
+}
+function setCat(c){ CAT=c; renderCats(); renderArticles(); }
+
+function renderArticles(){
+  const q = $('search').value.trim().toLowerCase();
+  const list = ARTICLES.filter(a=>
+    (CAT==='Tous' || a.categorie===CAT) &&
+    (!q || a.designation.toLowerCase().includes(q) || a.ref.toLowerCase().includes(q)));
+
+  if (!list.length){ $('artList').innerHTML = '<p class="empty">Aucun article trouvé.</p>'; return; }
+
+  $('artList').innerHTML = list.map(a=>{
+    const touched = a.tailles.some(t=>PICKS[a.ref+'|'+t]);
+    const chips = a.tailles.map(t=>{
+      const k = a.ref+'|'+t, p = PICKS[k];
+      const cls = p ? p.statut : (OPEN===k ? 'open' : '');
+      const q = p && p.statut!=='OK' && p.qte>0 ? `<span class="q">${p.qte}</span>` : '';
+      return `<button class="taille ${cls}" onclick="togglePanel('${a.ref}','${t}')">${t}${q}</button>`;
+    }).join('');
+    const panel = (OPEN && OPEN.startsWith(a.ref+'|')) ? renderPanel(a) : '';
+    return `<div class="art ${touched?'touched':''}">
+      <div class="ref">${a.ref} · ${a.categorie}</div>
+      <div class="nom">${a.designation}</div>
+      <div class="tailles">${chips}</div>${panel}</div>`;
+  }).join('');
+  updateCount();
+}
+
+function renderPanel(a){
+  const t = OPEN.split('|')[1];
+  const p = PICKS[OPEN] || { statut:'', qte:0 };
+  const sts = ['RUPTURE','FAIBLE','OK'].map(s=>
+    `<button class="st ${p.statut===s?'sel':''}" data-s="${s}" onclick="setStatut('${s}')">${s==='FAIBLE'?'Stock faible':s==='OK'?'OK':'Rupture'}</button>`).join('');
+  const qte = p.statut && p.statut!=='OK' ? `
+    <div class="qterow">
+      <div class="lbl">Qté à commander</div>
+      <div class="stepper">
+        <button onclick="stepQte(-1)">−</button><span>${p.qte}</span><button onclick="stepQte(1)">+</button>
+      </div>
+    </div>` : '';
+  return `<div class="panel">
+    <div class="lbl">Taille ${t} — état du stock</div>
+    <div class="statuts">${sts}</div>${qte}</div>`;
+}
+
+function togglePanel(ref, t){
+  const k = ref+'|'+t;
+  OPEN = (OPEN===k) ? null : k;
+  renderArticles();
+}
+function setStatut(s){
+  if (!OPEN) return;
+  const [ref, taille] = OPEN.split('|');
+  const a = ARTICLES.find(x=>x.ref===ref);
+  const prev = PICKS[OPEN];
+  if (prev && prev.statut===s){ delete PICKS[OPEN]; }        // re-tap → désélection
+  else PICKS[OPEN] = { ref, designation:a.designation, taille,
+    statut:s, qte: prev ? prev.qte : (s==='OK'?0:1) };
+  renderArticles();
+}
+function stepQte(d){
+  const p = PICKS[OPEN]; if(!p) return;
+  p.qte = Math.max(1, p.qte + d);
+  renderArticles();
+}
+function updateCount(){
+  const n = Object.keys(PICKS).length;
+  $('cnt').textContent = n;
+  $('btnSend').disabled = !n;
+}
+
+async function sendPointage(){
+  const items = Object.values(PICKS);
+  if (!items.length) return;
+  $('btnSend').disabled = true; $('btnSend').textContent = 'Envoi…';
+  try{
+    const d = await apiPost({ action:'pointage', magasin:MAG, responsable:RESP, items });
+    if (d.ok){ toast(d.saved + ' article(s) enregistré(s) ✔'); PICKS={}; OPEN=null; renderArticles(); }
+    else toast('Erreur : ' + (d.error||''));
+  }catch(e){ toast('Connexion impossible — réessayer'); }
+  $('btnSend').textContent = 'Envoyer'; updateCount();
+}
+
+/* ================== VUE D'ENSEMBLE ================== */
+function openVue(){ show('scrVue'); loadVue(); }
+
+async function loadVue(){
+  $('vueList').innerHTML = '<div class="spin"></div>';
+  try{
+    const d = await apiGet('vue');
+    VUE = d.vue || [];
+    renderVue();
+  }catch(e){
+    $('vueList').innerHTML = '<p class="empty">Connexion impossible. Actualiser pour réessayer.</p>';
+  }
+}
+
+function renderVue(){
+  if (!VUE.length){
+    $('vueList').innerHTML = '<p class="empty">Aucune rupture signalée.<br>Les pointages des deux magasins apparaîtront ici.</p>';
+    return;
+  }
+  $('vueList').innerHTML = VUE.map(v=>{
+    const total = Object.values(v.magasins).reduce((s,m)=>s+m.qte,0);
+    const badges = Object.entries(v.magasins).map(([mag,m])=>
+      `<span class="bdg ${m.statut}">${mag} · ${m.statut==='RUPTURE'?'Rupture':'Faible'} · ${m.qte} pcs
+        <small>${m.responsable} ${m.date}</small></span>`).join('');
+    return `<div class="vrow">
+      <div class="top"><div><div class="ref" style="font-size:12px;color:var(--ink-soft)">${v.ref}</div>
+        <div class="nom">${v.designation} <span class="total">— total ${total} pcs</span></div></div>
+        <span class="tsz">${v.taille}</span></div>
+      <div class="badges">${badges}</div></div>`;
+  }).join('');
+}
+
+function buildCommande(){
+  if (!VUE.length) return '';
+  const lignes = VUE.map(v=>{
+    const total = Object.values(v.magasins).reduce((s,m)=>s+m.qte,0);
+    const det = Object.entries(v.magasins).map(([mag,m])=>`${mag} ${m.qte}`).join(' + ');
+    return `• ${v.designation} — Taille ${v.taille} : *${total} pcs* (${det})`;
+  }).join('\n');
+  const d = new Date().toLocaleDateString('fr-FR');
+  return `📋 *COMMANDE ATELIER — ${d}*\nDAZI / TOP UNIFORM — Ruptures de stock\n\n${lignes}\n\nMerci de confirmer les délais de production.`;
+}
+
+function copierCommande(){
+  const txt = buildCommande();
+  if (!txt){ toast('Rien à commander'); return; }
+  navigator.clipboard.writeText(txt).then(()=>toast('Commande copiée ✔'))
+    .catch(()=>toast('Copie impossible sur ce navigateur'));
+}
+function partagerWhatsApp(){
+  const txt = buildCommande();
+  if (!txt){ toast('Rien à commander'); return; }
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
+
+/* ================== TOAST ================== */
+let toastT;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* ================== INIT ================== */
+show('scrSetup');
+</script>
+</body>
+</html>
