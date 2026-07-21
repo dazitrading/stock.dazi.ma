@@ -126,6 +126,27 @@ header h1 span{color:var(--amber)}
 .empty{color:var(--ink-soft);text-align:center;padding:50px 20px}
 .total{font-variant-numeric:tabular-nums}
 
+/* ---- Grand total + recap ---- */
+.grand-total{background:var(--ink);color:#fff;border-radius:var(--r);
+  padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;
+  align-items:center;font-family:'Barlow Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.05em;font-size:15px}
+.grand-total b{color:var(--amber);font-size:24px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
+.recap{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tsz-recap{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;
+  letter-spacing:.04em;background:var(--paper);border:1.5px solid var(--line);
+  border-radius:8px;padding:5px 10px;display:inline-flex;gap:7px;align-items:center}
+.tsz-recap b{color:var(--rupture);font-family:'Inter',sans-serif;font-size:14px;font-variant-numeric:tabular-nums}
+.tot-art{margin-top:10px;font-size:13px;color:var(--ink-soft);font-weight:500}
+.tot-art b{color:var(--ink);font-size:16px;font-variant-numeric:tabular-nums}
+.vrow details{margin-top:10px;border-top:1.5px dashed var(--line);padding-top:10px}
+.vrow summary{font-size:12px;color:var(--ink-soft);cursor:pointer;font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;list-style:none}
+.vrow summary::before{content:'▸ ';font-size:10px}
+.vrow details[open] summary::before{content:'▾ '}
+.vrow .drow{display:flex;gap:10px;align-items:flex-start;margin-top:10px}
+.vrow .drow .tsz{flex:0 0 auto;font-size:14px}
+
 /* ---- Toast ---- */
 .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);
   background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-weight:600;
@@ -197,7 +218,7 @@ header h1 span{color:var(--amber)}
 
 <script>
 /* ================== CONFIG ================== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbx87ongPgqqF2pbIPzhip4JMmY9olkW2g4iNDtqmlG7mXiRAFLlGoS2M2wH6MpxCrCg/exec'; // ← URL /exec du déploiement GAS
+const API_URL = 'COLLER_ICI_URL_APPS_SCRIPT_EXEC'; // ← URL /exec du déploiement GAS
 
 /* ================== ETAT ================== */
 let MAG = localStorage.getItem('sc_mag') || '';
@@ -367,33 +388,71 @@ async function loadVue(){
   }
 }
 
+const ORDRE_TAILLES = ['XS','S','M','L','XL','XXL','3XL','4XL','5XL','STD'];
+function triTailleKey(a,b){
+  const ia=ORDRE_TAILLES.indexOf(a), ib=ORDRE_TAILLES.indexOf(b);
+  return (ia<0?99:ia) - (ib<0?99:ib);
+}
+
+function grouperParArticle(){
+  const grp = {};
+  VUE.forEach(v=>{
+    if (!grp[v.ref]) grp[v.ref] = { ref:v.ref, designation:v.designation, lignes:[] };
+    grp[v.ref].lignes.push({
+      taille: v.taille,
+      magasins: v.magasins,
+      total: Object.values(v.magasins).reduce((s,m)=>s+m.qte, 0)
+    });
+  });
+  return Object.values(grp).map(a=>{
+    a.lignes.sort((x,y)=>triTailleKey(x.taille, y.taille));
+    a.totalArt = a.lignes.reduce((s,l)=>s+l.total, 0);
+    return a;
+  });
+}
+
 function renderVue(){
   if (!VUE.length){
     $('vueList').innerHTML = '<p class="empty">Aucune rupture signalée.<br>Les pointages des deux magasins apparaîtront ici.</p>';
     return;
   }
-  $('vueList').innerHTML = VUE.map(v=>{
-    const total = Object.values(v.magasins).reduce((s,m)=>s+m.qte,0);
-    const badges = Object.entries(v.magasins).map(([mag,m])=>
-      `<span class="bdg ${m.statut}">${mag} · ${m.statut==='RUPTURE'?'Rupture':'Faible'} · ${m.qte} pcs
-        <small>${m.responsable} ${m.date}</small></span>`).join('');
+  const articles = grouperParArticle();
+  const grandTotal = articles.reduce((s,a)=>s+a.totalArt, 0);
+
+  const cards = articles.map(a=>{
+    const recap = a.lignes.map(l=>
+      `<span class="tsz-recap">${l.taille}<b>${l.total}</b></span>`).join('');
+    const details = a.lignes.map(l=>{
+      const mags = Object.entries(l.magasins).map(([mag,m])=>
+        `<span class="bdg ${m.statut}">${mag} · ${m.qte} pcs
+          <small>${m.responsable} ${m.date}</small></span>`).join('');
+      return `<div class="drow"><span class="tsz">${l.taille}</span><div class="badges">${mags}</div></div>`;
+    }).join('');
     return `<div class="vrow">
-      <div class="top"><div><div class="ref" style="font-size:12px;color:var(--ink-soft)">${v.ref}</div>
-        <div class="nom">${v.designation} <span class="total">— total ${total} pcs</span></div></div>
-        <span class="tsz">${v.taille}</span></div>
-      <div class="badges">${badges}</div></div>`;
+      <div class="ref" style="font-size:12px;color:var(--ink-soft)">${a.ref}</div>
+      <div class="nom">${a.designation}</div>
+      <div class="recap">${recap}</div>
+      <div class="tot-art">Total à commander : <b>${a.totalArt} pcs</b></div>
+      <details><summary>Détail par magasin</summary>${details}</details>
+    </div>`;
   }).join('');
+
+  $('vueList').innerHTML =
+    `<div class="grand-total"><span>Total général atelier</span><b>${grandTotal} pcs</b></div>${cards}`;
 }
 
 function buildCommande(){
   if (!VUE.length) return '';
-  const lignes = VUE.map(v=>{
-    const total = Object.values(v.magasins).reduce((s,m)=>s+m.qte,0);
-    const det = Object.entries(v.magasins).map(([mag,m])=>`${mag} ${m.qte}`).join(' + ');
-    return `• ${v.designation} — Taille ${v.taille} : *${total} pcs* (${det})`;
-  }).join('\n');
+  const articles = grouperParArticle();
+  const grandTotal = articles.reduce((s,a)=>s+a.totalArt, 0);
+
+  const lignes = articles.map(a=>{
+    const detail = a.lignes.map(l=>`${l.taille}:${l.total}`).join(' - ');
+    return `• *${a.designation}*\n  ${detail}\n  Total : *${a.totalArt} pcs*`;
+  }).join('\n\n');
+
   const d = new Date().toLocaleDateString('fr-FR');
-  return `📋 *COMMANDE ATELIER — ${d}*\nDAZI / TOP UNIFORM — Ruptures de stock\n\n${lignes}\n\nMerci de confirmer les délais de production.`;
+  return `📋 *COMMANDE ATELIER — ${d}*\nDAZI + TOP UNIFORM\n\n${lignes}\n\n═══════════\n*TOTAL GÉNÉRAL : ${grandTotal} pcs*\n\nMerci de confirmer les délais de production.`;
 }
 
 function copierCommande(){
