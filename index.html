@@ -147,6 +147,33 @@ header h1 span{color:var(--amber)}
 .vrow .drow{display:flex;gap:10px;align-items:flex-start;margin-top:10px}
 .vrow .drow .tsz{flex:0 0 auto;font-size:14px}
 
+/* ---- Comptage stock (nouveau modèle) ---- */
+.count-row{display:grid;grid-template-columns:44px 60px 1fr 90px;align-items:center;
+  gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.count-row:last-child{border-bottom:0}
+.count-row .size{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;
+  letter-spacing:.04em;text-align:center;background:var(--paper);border-radius:6px;padding:4px 0}
+.count-row .target{font-size:12px;color:var(--ink-soft);text-align:center;line-height:1.2}
+.count-row .target b{display:block;color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+.count-row input{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:11px;
+  font:inherit;font-weight:700;font-size:17px;text-align:center;background:var(--card);
+  font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.count-row input::-webkit-outer-spin-button,
+.count-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.count-row input:focus{outline:2px solid var(--amber);border-color:var(--amber)}
+.count-row input.filled{border-color:var(--ink);background:var(--paper)}
+.count-row .manque{font-size:13px;text-align:right;color:var(--ink-soft);line-height:1.3}
+.count-row .manque b{font-size:20px;font-variant-numeric:tabular-nums;display:block}
+.count-row .manque.need{color:var(--rupture)}
+.count-row .manque.need b{color:var(--rupture)}
+.count-row .manque.ok{color:var(--ok);font-weight:600}
+.count-head{display:grid;grid-template-columns:44px 60px 1fr 90px;gap:10px;
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
+  font-weight:600;padding-bottom:8px;border-bottom:1.5px solid var(--line);text-align:center}
+.count-head span:nth-child(3){text-align:center}
+.count-head span:nth-child(4){text-align:right}
+.pas-compte{color:var(--faible);font-style:italic;font-size:12px}
+
 /* ---- Toast ---- */
 .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);
   background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-weight:600;
@@ -303,15 +330,17 @@ function renderArticles(){
   if (!list.length){ $('artList').innerHTML = '<p class="empty">Aucun article trouvé.</p>'; return; }
 
   $('artList').innerHTML = list.map(a=>{
-    const touched = a.tailles.some(t=>PICKS[a.ref+'|'+t]);
+    const touched = a.tailles.some(t=>PICKS[a.ref+'|'+t.taille] !== undefined);
     const chips = a.tailles.map(t=>{
-      const k = a.ref+'|'+t, p = PICKS[k];
-      const cls = p ? p.statut : (OPEN===k ? 'open' : '');
-      const q = p && p.statut!=='OK' && p.qte>0 ? `<span class="q">${p.qte}</span>` : '';
-      return `<button class="taille ${cls}" onclick="togglePanel('${a.ref}','${t}')">${t}${q}</button>`;
+      const k = a.ref+'|'+t.taille;
+      const p = PICKS[k];
+      const filled = p !== undefined;
+      const cls = filled ? 'OK' : (OPEN===a.ref ? '' : '');
+      const q = filled ? `<span class="q">${p.dispo}</span>` : '';
+      return `<button class="taille ${cls}" onclick="openArticle('${a.ref}')">${t.taille}${q}</button>`;
     }).join('');
-    const panel = (OPEN && OPEN.startsWith(a.ref+'|')) ? renderPanel(a) : '';
-    return `<div class="art ${touched?'touched':''}">
+    const panel = (OPEN===a.ref) ? renderPanel(a) : '';
+    return `<div class="art ${touched?'touched':''}" data-art="${a.ref}">
       <div class="ref">${a.ref} · ${a.categorie}</div>
       <div class="nom">${a.designation}</div>
       <div class="tailles">${chips}</div>${panel}</div>`;
@@ -319,43 +348,79 @@ function renderArticles(){
   updateCount();
 }
 
-function renderPanel(a){
-  const t = OPEN.split('|')[1];
-  const p = PICKS[OPEN] || { statut:'', qte:0 };
-  const sts = ['RUPTURE','FAIBLE','OK'].map(s=>
-    `<button class="st ${p.statut===s?'sel':''}" data-s="${s}" onclick="setStatut('${s}')">${s==='FAIBLE'?'Stock faible':s==='OK'?'OK':'Rupture'}</button>`).join('');
-  const qte = p.statut && p.statut!=='OK' ? `
-    <div class="qterow">
-      <div class="lbl">Qté à commander</div>
-      <div class="stepper">
-        <button onclick="stepQte(-1)">−</button><span>${p.qte}</span><button onclick="stepQte(1)">+</button>
-      </div>
-    </div>` : '';
-  return `<div class="panel">
-    <div class="lbl">Taille ${t} — état du stock</div>
-    <div class="statuts">${sts}</div>${qte}</div>`;
+function openArticle(ref){
+  OPEN = (OPEN===ref) ? null : ref;
+  renderArticles();
 }
 
-function togglePanel(ref, t){
-  const k = ref+'|'+t;
-  OPEN = (OPEN===k) ? null : k;
-  renderArticles();
+function renderPanel(a){
+  const rows = a.tailles.map(t=>{
+    const k = a.ref+'|'+t.taille;
+    const p = PICKS[k];
+    const val = p !== undefined ? p.dispo : '';
+    const filled = p !== undefined;
+    let manqueHtml = '<span class="manque">—</span>';
+    if (filled){
+      const m = Math.max(0, t.objectif - p.dispo);
+      manqueHtml = m === 0
+        ? '<span class="manque ok">OK ✔</span>'
+        : `<span class="manque need"><b>${m}</b>à cmd</span>`;
+    }
+    return `<div class="count-row">
+      <span class="size">${t.taille}</span>
+      <span class="target">obj<b>${t.objectif}</b></span>
+      <input type="number" inputmode="numeric" min="0" step="1" value="${val}"
+        placeholder="dispo" class="${filled?'filled':''}"
+        oninput="setDispo('${a.ref}','${t.taille}',this.value)">
+      ${manqueHtml}
+    </div>`;
+  }).join('');
+  return `<div class="panel">
+    <div class="lbl">Compter le stock disponible</div>
+    <div class="count-head"><span>Taille</span><span>Objectif</span><span>Disponible</span><span>Manque</span></div>
+    ${rows}
+  </div>`;
 }
-function setStatut(s){
-  if (!OPEN) return;
-  const [ref, taille] = OPEN.split('|');
+
+function setDispo(ref, taille, val){
+  const k = ref+'|'+taille;
   const a = ARTICLES.find(x=>x.ref===ref);
-  const prev = PICKS[OPEN];
-  if (prev && prev.statut===s){ delete PICKS[OPEN]; }        // re-tap → désélection
-  else PICKS[OPEN] = { ref, designation:a.designation, taille,
-    statut:s, qte: prev ? prev.qte : (s==='OK'?0:1) };
-  renderArticles();
+  const t = a.tailles.find(x=>x.taille===taille);
+
+  if (val === '' || val === null){
+    delete PICKS[k];
+  } else {
+    const n = Math.max(0, parseInt(val, 10) || 0);
+    PICKS[k] = { ref, designation:a.designation, taille, dispo:n };
+  }
+  updateCount();
+
+  // Update juste le manque et le style de l'input, sans re-render (pour garder le focus)
+  const inputs = document.querySelectorAll(`[data-art="${ref}"] input`);
+  const idx = a.tailles.findIndex(x=>x.taille===taille);
+  if (inputs[idx]){
+    inputs[idx].classList.toggle('filled', PICKS[k] !== undefined);
+  }
+  const manqueSpans = document.querySelectorAll(`[data-art="${ref}"] .manque`);
+  if (manqueSpans[idx]){
+    const p = PICKS[k];
+    if (p === undefined){
+      manqueSpans[idx].outerHTML = '<span class="manque">—</span>';
+    } else {
+      const m = Math.max(0, t.objectif - p.dispo);
+      manqueSpans[idx].outerHTML = m === 0
+        ? '<span class="manque ok">OK ✔</span>'
+        : `<span class="manque need"><b>${m}</b>à cmd</span>`;
+    }
+  }
+  // Update touched sur la card
+  const card = document.querySelector(`[data-art="${ref}"]`);
+  if (card){
+    const any = a.tailles.some(x=>PICKS[ref+'|'+x.taille] !== undefined);
+    card.classList.toggle('touched', any);
+  }
 }
-function stepQte(d){
-  const p = PICKS[OPEN]; if(!p) return;
-  p.qte = Math.max(1, p.qte + d);
-  renderArticles();
-}
+
 function updateCount(){
   const n = Object.keys(PICKS).length;
   $('cnt').textContent = n;
@@ -368,7 +433,7 @@ async function sendPointage(){
   $('btnSend').disabled = true; $('btnSend').textContent = 'Envoi…';
   try{
     const d = await apiPost({ action:'pointage', magasin:MAG, responsable:RESP, items });
-    if (d.ok){ toast(d.saved + ' article(s) enregistré(s) ✔'); PICKS={}; OPEN=null; renderArticles(); }
+    if (d.ok){ toast(d.saved + ' comptage(s) enregistré(s) ✔'); PICKS={}; OPEN=null; renderArticles(); }
     else toast('Erreur : ' + (d.error||''));
   }catch(e){ toast('Connexion impossible — réessayer'); }
   $('btnSend').textContent = 'Envoyer'; updateCount();
@@ -400,20 +465,25 @@ function grouperParArticle(){
     if (!grp[v.ref]) grp[v.ref] = { ref:v.ref, designation:v.designation, lignes:[] };
     grp[v.ref].lignes.push({
       taille: v.taille,
-      magasins: v.magasins,
-      total: Object.values(v.magasins).reduce((s,m)=>s+m.qte, 0)
+      objectif_par_magasin: v.objectif_par_magasin,
+      objectif_total: v.objectif_total,
+      dispo_total: v.dispo_total,
+      manque: v.manque_total,
+      all_counted: v.all_counted,
+      magasins: v.magasins
     });
   });
   return Object.values(grp).map(a=>{
     a.lignes.sort((x,y)=>triTailleKey(x.taille, y.taille));
-    a.totalArt = a.lignes.reduce((s,l)=>s+l.total, 0);
+    a.totalArt = a.lignes.reduce((s,l)=>s+l.manque, 0);
+    a.incomplet = a.lignes.some(l=>!l.all_counted);
     return a;
   });
 }
 
 function renderVue(){
   if (!VUE.length){
-    $('vueList').innerHTML = '<p class="empty">Aucune rupture signalée.<br>Les pointages des deux magasins apparaîtront ici.</p>';
+    $('vueList').innerHTML = '<p class="empty">Aucun manque calculé.<br>Fais un pointage dans les 2 magasins pour voir la commande atelier.</p>';
     return;
   }
   const articles = grouperParArticle();
@@ -421,24 +491,34 @@ function renderVue(){
 
   const cards = articles.map(a=>{
     const recap = a.lignes.map(l=>
-      `<span class="tsz-recap">${l.taille}<b>${l.total}</b></span>`).join('');
+      `<span class="tsz-recap">${l.taille}<b>${l.manque}</b></span>`).join('');
     const details = a.lignes.map(l=>{
-      const mags = Object.entries(l.magasins).map(([mag,m])=>
-        `<span class="bdg ${m.statut}">${mag} · ${m.qte} pcs
-          <small>${m.responsable} ${m.date}</small></span>`).join('');
+      const mags = Object.entries(l.magasins).map(([mag,m])=>{
+        if (!m.compte){
+          return `<span class="bdg FAIBLE">${mag} · <span class="pas-compte">pas encore compté</span>
+            <small>objectif ${m.objectif}</small></span>`;
+        }
+        const cls = m.manque > 0 ? 'RUPTURE' : 'ok-tag';
+        const txt = m.manque > 0
+          ? `${mag} · dispo ${m.dispo}/${m.objectif} → manque <b>${m.manque}</b>`
+          : `${mag} · dispo ${m.dispo}/${m.objectif} · OK ✔`;
+        return `<span class="bdg ${cls}">${txt}
+          <small>${m.responsable} ${m.date}</small></span>`;
+      }).join('');
       return `<div class="drow"><span class="tsz">${l.taille}</span><div class="badges">${mags}</div></div>`;
     }).join('');
+    const warn = a.incomplet ? '<div class="pas-compte" style="margin-top:6px">⚠ Comptage incomplet — un magasin n\'a pas encore pointé</div>' : '';
     return `<div class="vrow">
       <div class="ref" style="font-size:12px;color:var(--ink-soft)">${a.ref}</div>
       <div class="nom">${a.designation}</div>
       <div class="recap">${recap}</div>
-      <div class="tot-art">Total à commander : <b>${a.totalArt} pcs</b></div>
+      <div class="tot-art">Total à commander : <b>${a.totalArt} pcs</b></div>${warn}
       <details><summary>Détail par magasin</summary>${details}</details>
     </div>`;
   }).join('');
 
   $('vueList').innerHTML =
-    `<div class="grand-total"><span>Total général atelier</span><b>${grandTotal} pcs</b></div>${cards}`;
+    `<div class="grand-total"><span>Total commande atelier</span><b>${grandTotal} pcs</b></div>${cards}`;
 }
 
 function buildCommande(){
@@ -447,12 +527,14 @@ function buildCommande(){
   const grandTotal = articles.reduce((s,a)=>s+a.totalArt, 0);
 
   const lignes = articles.map(a=>{
-    const detail = a.lignes.map(l=>`${l.taille}:${l.total}`).join(' - ');
-    return `• *${a.designation}*\n  ${detail}\n  Total : *${a.totalArt} pcs*`;
+    const detail = a.lignes.filter(l=>l.manque>0)
+      .map(l=>`${l.taille}:${l.manque}`).join(' - ');
+    const warn = a.incomplet ? ' ⚠ (comptage incomplet)' : '';
+    return `• *${a.designation}*${warn}\n  ${detail}\n  Total : *${a.totalArt} pcs*`;
   }).join('\n\n');
 
   const d = new Date().toLocaleDateString('fr-FR');
-  return `📋 *COMMANDE ATELIER — ${d}*\nDAZI + TOP UNIFORM\n\n${lignes}\n\n═══════════\n*TOTAL GÉNÉRAL : ${grandTotal} pcs*\n\nMerci de confirmer les délais de production.`;
+  return `📋 *COMMANDE ATELIER — ${d}*\nDAZI + TOP UNIFORM (manque calculé)\n\n${lignes}\n\n═══════════\n*TOTAL GÉNÉRAL : ${grandTotal} pcs*\n\nMerci de confirmer les délais de production.`;
 }
 
 function copierCommande(){
